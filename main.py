@@ -7,7 +7,10 @@ import pyttsx3
 import nacl
 import ffmpeg
 from config import settings
+###
+from gtts import gTTS
 
+###
 
 client_id = 791105631385681960
 TOKEN = 'NzkxMTA1NjMxMzg1NjgxOTYw.X-KUiA.ie8TJ6xavH0_dcww5A0D_UWIubA'
@@ -43,7 +46,7 @@ names_buffer_path = 'names_buffer.csv'
 help_path = 'help.csv'
 default_greet = 'Приветствую'           # приветствие по умолчанию
 greet = default_greet                   # переменная приветствия
-mode = 0                                # режим работы (0, 1, 2)
+mode = 1                                # режим работы (0, 1, 2)
 is_connected = False                    # подключен ли бот
 voice_channel_for_mode_2 = None         # голосовой канал для режима №2
 voice_client = None                     # переменная для голосового клиента
@@ -95,13 +98,10 @@ def is_right_form_of_name_and_disc(name_and_disc):
 
 def file_can_be_made(greet_path, greet, name):
     try:
+        mes = greet + ', ' + name
+        print(mes)
         engine = pyttsx3.init()
-        rate = engine.getProperty('rate')
-        engine.setProperty('rate', rate - 50) #50
-
-        output = greet + ', ' + name
-        print(output)
-        engine.save_to_file(output, greet_path)
+        engine.save_to_file(mes, greet_path)
         engine.runAndWait()
         return True
     except:
@@ -119,6 +119,7 @@ def prepare_file_for_playing(greet_path, after, member):
     else:
         name = member.name
 
+
     if file_can_be_made(greet_path, greet, name):               # пробуем новое приветствие и новое имя
         return
     elif file_can_be_made(greet_path, greet, member.name):      # пробуем новое притствие и обычное имя
@@ -128,7 +129,7 @@ def prepare_file_for_playing(greet_path, after, member):
     elif file_can_be_made(greet_path, default_greet, ''):        # если ничего не подошло, выдаем дефолтное
         return
     file_can_be_made(greet_path, 'Hi', '')                      # если и это не подошло, выдаем англ вариант
-
+    return
 
 class MyClient(discord.Client):
 
@@ -501,9 +502,14 @@ class MyClient(discord.Client):
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
                         print('sleep_before_playing')  # debug
+                    try:
 
-                    voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                             source=greet_path))
+                        voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                                 source=greet_path))
+                    except Exception as e:
+                        await self.guilds[0].text_channels[0].send(e)
+                        await asyncio.sleep(1)
+
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
                         print('sleep_after_playing')  # debug
