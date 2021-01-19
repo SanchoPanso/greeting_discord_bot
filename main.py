@@ -8,7 +8,6 @@ import nacl
 import ffmpeg
 from config import settings
 ###
-from gtts import gTTS
 
 ###
 
@@ -472,6 +471,7 @@ class MyClient(discord.Client):
         global extra_names_are_available
         global names_path
         global names_buffer_path
+        global greet_path
 
         if mode == 1:
 
