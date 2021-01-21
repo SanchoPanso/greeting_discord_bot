@@ -506,25 +506,12 @@ class MyClient(discord.Client):
                         await asyncio.sleep(1)
                         print('sleep_before_playing')  # debug
 
-                    try:
 
-                        print("ctypes - Find opus:")
-                        a = ctypes.util.find_library('opus')
-                        print(a)
-
-                        print("Discord - Load Opus:")
-                        b = discord.opus.load_opus(a)
-                        print(b)
-
-                        print("Discord - Is loaded:")
-                        c = discord.opus.is_loaded()
-                        print(c)
-
-                        voice_client.play(discord.FFmpegPCMAudio(greet_path))
+                    voice_client.play(discord.FFmpegPCMAudio(greet_path))
                             #voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
                                                                      #source=greet_path))
-                    except Exception as e:
-                        await self.guilds[0].text_channels[0].send(e)
+                    #except Exception as e:
+                        #await self.guilds[0].text_channels[0].send(e)
                         #await self.guilds[0].text_channels[0].send(e)
                         #await asyncio.sleep(1)
 
