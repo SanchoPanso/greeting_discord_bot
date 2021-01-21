@@ -4,8 +4,9 @@ import asyncio
 import csv
 import os
 import pyttsx3
-import nacl
-import ffmpeg
+import ctypes
+import ctypes.util
+
 from config import settings
 ###
 
@@ -39,7 +40,7 @@ async def mem(ctx):
 #bot.run(TOKEN)
 
 
-greet_path = 'greet.mp3'                  # имя файла для записи голоса
+greet_path = 'greet.opus'                  # имя файла для записи голоса
 names_path = 'names.csv'
 names_buffer_path = 'names_buffer.csv'
 help_path = 'help.csv'
@@ -85,6 +86,7 @@ def try_to_find_extra_name(name, discriminator, members, path1, path2):
 
     return output
 
+
 def is_right_form_of_name_and_disc(name_and_disc):
     if len(name_and_disc) <= 4:
         return False
@@ -94,6 +96,7 @@ def is_right_form_of_name_and_disc(name_and_disc):
             return False
 
     return True
+
 
 def file_can_be_made(greet_path, greet, name):
     try:
@@ -502,13 +505,28 @@ class MyClient(discord.Client):
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
                         print('sleep_before_playing')  # debug
+
                     try:
 
-                        voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                 source=greet_path))
+                        print("ctypes - Find opus:")
+                        a = ctypes.util.find_library('opus')
+                        print(a)
+
+                        print("Discord - Load Opus:")
+                        b = discord.opus.load_opus(a)
+                        print(b)
+
+                        print("Discord - Is loaded:")
+                        c = discord.opus.is_loaded()
+                        print(c)
+
+                        voice_client.play(discord.FFmpegPCMAudio(greet_path))
+                            #voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                                     #source=greet_path))
                     except Exception as e:
                         await self.guilds[0].text_channels[0].send(e)
-                        await asyncio.sleep(1)
+                        #await self.guilds[0].text_channels[0].send(e)
+                        #await asyncio.sleep(1)
 
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
@@ -545,8 +563,9 @@ class MyClient(discord.Client):
                             await asyncio.sleep(1)
                             print('sleep_before_playing')  # debug
 
-                        voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                       source=greet_path))
+                        voice_client.play(discord.FFmpegPCMAudio(greet_path))
+                        #voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                                       #source=greet_path))
                         while voice_client.is_playing():
                             await asyncio.sleep(1)
                             print('sleep_after_playing')  # debug
