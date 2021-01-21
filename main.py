@@ -507,9 +507,9 @@ class MyClient(discord.Client):
                         print('sleep_before_playing')  # debug
 
 
-                    voice_client.play(discord.FFmpegPCMAudio(greet_path))
-                            #voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                     #source=greet_path))
+                    #voice_client.play(discord.FFmpegPCMAudio(greet_path))
+                    voice_client.play(discord.FFmpegPCMAudio(executable='ffmpeg-4.3.1-amd64-static/ffmpeg',
+                                                             source=greet_path))
                     #except Exception as e:
                         #await self.guilds[0].text_channels[0].send(e)
                         #await self.guilds[0].text_channels[0].send(e)
@@ -550,7 +550,7 @@ class MyClient(discord.Client):
                             await asyncio.sleep(1)
                             print('sleep_before_playing')  # debug
 
-                        voice_client.play(discord.FFmpegPCMAudio(greet_path))
+
                         #voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
                                                                        #source=greet_path))
                         while voice_client.is_playing():
