@@ -6,41 +6,287 @@ import os
 import pyttsx3
 import ctypes
 import ctypes.util
-
 from config import settings
-###
+
 
 ###
+greet_path = 'greet.mp3'                  # имя файла для записи голоса
+names_path = 'names.csv'
+names_buffer_path = 'names_buffer.csv'
+help_path = 'help.csv'
+default_greet = 'Приветствую'           # приветствие по умолчанию
+greet = default_greet                   # переменная приветствия
+mode = 1                                # режим работы (0, 1, 2)
+is_connected = False                    # подключен ли бот
+voice_channel_for_mode_2 = None         # голосовой канал для режима №2
+voice_client = None                     # переменная для голосового клиента
+extra_names_are_available = False
+###
 
-client_id = 791105631385681960
-TOKEN = 'NzkxMTA1NjMxMzg1NjgxOTYw.X-KUiA.ie8TJ6xavH0_dcww5A0D_UWIubA'
+
+def is_connected(voice_client):
+
+    if voice_client is None:
+        return False
+
+    else:
+        if voice_client.is_connected():
+            return True
+        else:
+            return False
+
+
+def try_to_find_extra_name(name, discriminator, members, path1, path2):
+
+    fieldnames = ['id', 'name_and_disc', 'extra_name']
+    output = name
+
+    path = path1
+    if not os.path.exists(path1):           #### подумать над предупреждением
+        if os.path.exists(path2):
+            os.rename(path2, path1)
+            path = path1
+        else:
+            return output
+
+    id = -1
+    for member in members:
+        if discriminator == member.discriminator:
+            if name == member.name:
+                id = member.id
+                break
+
+    if id == -1:
+        return output###########
+
+
+
+def file_can_be_made(greet_path, greet, name):
+    try:
+        mes = greet + ', ' + name
+        print(mes)
+        engine = pyttsx3.init()
+        engine.save_to_file(mes, greet_path)
+        engine.runAndWait()
+        return True
+    except:
+        return False
+
+
+def prepare_file_for_playing(greet_path, after, member):
+    global default_greet
+    if extra_names_are_available:
+        name = try_to_find_extra_name(member.name,
+                                      member.discriminator,
+                                      after.channel.guild.members,
+                                      names_path,
+                                      names_buffer_path)
+    else:
+        name = member.name
+
 
 intents = discord.Intents.default()
 intents.members = True
 
+bot = commands.Bot(command_prefix=settings['prefix'],
+                   intents=intents)
 
 
-bot = commands.Bot(command_prefix='!')
+@bot.command(pass_context=True)
+async def test(ctx, arg):
+    await ctx.send(arg)
 
-
-@bot.command(pass_context=True)  # разрешаем передавать агрументы
-async def test(ctx, arg):  # создаем асинхронную фунцию бота
-    await ctx.send(arg)  # отправляем обратно аргумент
-
-@bot.command() # Не передаём аргумент pass_context, так как он был нужен в старых версиях.
-async def hello(ctx): # Создаём функцию и передаём аргумент ctx.
-    author = ctx.message.author # Объявляем переменную author и записываем туда информацию об авторе.
-    await ctx.send(f'Hello, {author.mention}!') # Выводим сообщение с упоминанием автора, обращаясь к переменной author.
 
 @bot.command()
-async def mem(ctx):
-
-    print(ctx.voice_client)
-
-#bot.run(TOKEN)
+async def hello(ctx):
+    await ctx.channel.send('**Hello World!**')
 
 
-greet_path = 'greet.opus'                  # имя файла для записи голоса
+@bot.command()
+async def connect(ctx, number):
+    global voice_client
+
+    if not number.isdigit():
+        await ctx.channel.send('Неправильный аргумент')  # 1
+        return
+
+    number = int(number)
+
+    if not (1 <= number <= len(ctx.guild.voice_channels)):
+        await ctx.channel.send('Неправильный аргумент')  # 2
+        return
+
+    new_channel = ctx.guild.voice_channels[number - 1]
+
+    if is_connected(voice_client):
+        if voice_client.channel != new_channel:
+            await voice_client.disconnect()
+            voice_client = await new_channel.connect()
+        else:
+            pass
+    else:
+        voice_client = await new_channel.connect()
+
+#    if voice_client.is_connected():# now is useless
+#        await message.channel.send(f'Успешно подключено к каналу {number}')
+
+
+@bot.command()
+async def disconnect(ctx):
+    global voice_client
+
+    await ctx.guild.change_voice_state(channel=None,
+                                       self_mute=False,
+                                       self_deaf=False)
+    voice_client = None
+
+
+@bot.command()
+async def voice_members_info(ctx):
+    for channel in ctx.guild.voice_channels:
+        await ctx.channel.send(channel)
+        for member in channel.members:
+            await ctx.channel.send(member)
+
+
+@bot.command()
+async def members_info(ctx):
+    members = ctx.guild.members
+    await ctx.channel.send(members)
+
+
+@bot.command()
+async def members_brief_info(ctx):
+        members = ctx.guild.members
+        result = ''
+        for i in range(len(members)):
+            result += 'name: ' + members[i].name + ', '
+            result += 'id: ' + str(members[i].id) + ', '
+            result += 'discriminator: ' + members[i].discriminator
+            result += '\n'
+        await ctx.channel.send(result)
+
+
+@bot.command()
+async def get_mode(ctx):
+
+    global mode
+
+    await ctx.channel.send('mode = {0}'.format(mode))
+
+
+@bot.command()
+async def set_mode(ctx, new_mode):
+
+    global voice_client
+    global mode
+
+    if new_mode not in ['0', '1', '2']:
+        await ctx.channel.send('Неправильный аргумент')  # 2
+        return
+
+    new_mode = int(new_mode)
+
+    if voice_client is not None and mode != new_mode:
+        while voice_client.is_playing():  #####
+            await asyncio.sleep(1)
+        if voice_client.is_connected():
+            await voice_client.disconnect()
+
+    if new_mode == 2:
+        if voice_channel_for_mode_2 is not None:
+            if len(voice_channel_for_mode_2.members) > 0:
+                voice_client = await voice_channel_for_mode_2.connect()
+
+    mode = new_mode
+    await ctx.channel.send('mode = {0}'.format(mode))  # 3
+
+
+@bot.command()
+async def get_greet(ctx):
+
+    global greet
+
+    await ctx.channel.send('greet = {0}'.format(greet))
+
+
+@bot.command()
+async def set_greet(ctx, new_greet):
+
+    global greet
+
+    new_greet = ' '.join(new_greet.split('_'))
+    await ctx.channel.send('greet = {0}'.format(greet))
+
+
+@bot.command()
+async def set_default_greet(ctx):
+
+    global greet
+    global default_greet
+
+    greet = default_greet  # checked
+    await ctx.channel.send('greet = {0}'.format(greet))
+
+
+@bot.event
+async def on_ready():
+    print('Ready!')
+
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+
+    executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
+    global voice_client
+    global extra_names_are_available
+    global names_path
+    global names_buffer_path
+    global greet_path
+
+    if mode == 1:
+
+        if before.channel is None and after.channel is not None and member.id != bot.user.id:
+            if after.channel.guild.me.permissions_in(after.channel).connect:
+
+                print(member)  # debug
+
+                prepare_file_for_playing(greet_path, after, member)
+
+                # voice_client = discord.VoiceClient()#############ЗАКОММЕНТИТЬ
+
+                if voice_client is None:
+                    voice_client = await after.channel.connect()
+                elif not voice_client.is_connected():
+                    voice_client = await after.channel.connect()
+                elif voice_client.channel != after:
+                    await voice_client.disconnect()
+                    voice_client = await after.channel.connect()
+
+                while voice_client.is_playing():
+                    await asyncio.sleep(1)
+                    print('sleep_before_playing')  # debug
+
+                voice_client.play(discord.FFmpegPCMAudio(source=greet_path))
+
+                while voice_client.is_playing():
+                    await asyncio.sleep(1)
+                    print('sleep_after_playing')  # debug
+
+                if voice_client.is_connected():
+                    await voice_client.disconnect()
+
+
+bot.run(settings['token'])
+
+
+
+
+
+
+
+
+greet_path = 'greet.mp3'                  # имя файла для записи голоса
 names_path = 'names.csv'
 names_buffer_path = 'names_buffer.csv'
 help_path = 'help.csv'
@@ -506,10 +752,9 @@ class MyClient(discord.Client):
                         await asyncio.sleep(1)
                         print('sleep_before_playing')  # debug
 
-
-                    #voice_client.play(discord.FFmpegPCMAudio(greet_path))
-                    voice_client.play(discord.FFmpegPCMAudio(executable='ffmpeg-4.3.1-amd64-static/ffmpeg',
+                    voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
                                                              source=greet_path))
+                    #voice_client.play(discord.FFmpegPCMAudio(greet_path))
                     #except Exception as e:
                         #await self.guilds[0].text_channels[0].send(e)
                         #await self.guilds[0].text_channels[0].send(e)
@@ -584,4 +829,4 @@ class MyClient(discord.Client):
 
 
 client = MyClient(intents=intents)
-client.run(settings['token'])
+#client.run(settings['token'])
