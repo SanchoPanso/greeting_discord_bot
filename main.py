@@ -268,17 +268,17 @@ async def on_voice_state_update(member, before, after):
                     await asyncio.sleep(1)
                     print('sleep_before_playing')  # debug
 ##################################################
-                print("ctypes - Find opus:")
-                a = ctypes.util.find_library('opus')
-                print(a)
-
-                print("Discord - Load Opus:")
-                b = discord.opus.load_opus(a)
-                print(b)
-
-                print("Discord - Is loaded:")
-                c = discord.opus.is_loaded()
-                print(c)
+#                print("ctypes - Find opus:")
+#                a = ctypes.util.find_library('opus')
+#                print(a)
+#
+#                print("Discord - Load Opus:")
+#                b = discord.opus.load_opus(a)
+#                print(b)
+#
+#                print("Discord - Is loaded:")
+#                c = discord.opus.is_loaded()
+#                print(c)
 #####################################################
                 voice_client.play(discord.FFmpegPCMAudio(source=greet_path))
 
