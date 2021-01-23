@@ -4,28 +4,32 @@ import asyncio
 import csv
 import os
 import pyttsx3
+import pandas as pd
 import ctypes
 import ctypes.util
 from config import settings
+from my_module import Greeting
 
+greeting = Greeting()
 
 ###
-greet_path = 'greet.mp3'                  # имя файла для записи голоса
+greet_path = 'greet.mp3'  # имя файла для записи голоса
 names_path = 'names.csv'
 names_buffer_path = 'names_buffer.csv'
 help_path = 'help.csv'
-default_greet = 'Приветствую'           # приветствие по умолчанию
-greet = default_greet                   # переменная приветствия
-mode = 1                                # режим работы (0, 1, 2)
-is_connected = False                    # подключен ли бот
-voice_channel_for_mode_2 = None         # голосовой канал для режима №2
-voice_client = None                     # переменная для голосового клиента
+default_greet = 'Приветствую'  # приветствие по умолчанию
+greet = default_greet  # переменная приветствия
+mode = 1  # режим работы (0, 1, 2)
+is_connected = False  # подключен ли бот
+voice_channel_for_mode_2 = None  # голосовой канал для режима №2
+voice_client = None  # переменная для голосового клиента
 extra_names_are_available = False
+
+
 ###
 
 
 def is_connected(voice_client):
-
     if voice_client is None:
         return False
 
@@ -37,12 +41,11 @@ def is_connected(voice_client):
 
 
 def try_to_find_extra_name(name, discriminator, members, path1, path2):
-
     fieldnames = ['id', 'name_and_disc', 'extra_name']
     output = name
 
     path = path1
-    if not os.path.exists(path1):           #### подумать над предупреждением
+    if not os.path.exists(path1):  #### подумать над предупреждением
         if os.path.exists(path2):
             os.rename(path2, path1)
             path = path1
@@ -57,8 +60,7 @@ def try_to_find_extra_name(name, discriminator, members, path1, path2):
                 break
 
     if id == -1:
-        return output###########
-
+        return output  ###########
 
 
 def file_can_be_made(greet_path, greet, name):
@@ -127,6 +129,7 @@ async def connect(ctx, number):
     else:
         voice_client = await new_channel.connect()
 
+
 #    if voice_client.is_connected():# now is useless
 #        await message.channel.send(f'Успешно подключено к каналу {number}')
 
@@ -157,19 +160,18 @@ async def members_info(ctx):
 
 @bot.command()
 async def members_brief_info(ctx):
-        members = ctx.guild.members
-        result = ''
-        for i in range(len(members)):
-            result += 'name: ' + members[i].name + ', '
-            result += 'id: ' + str(members[i].id) + ', '
-            result += 'discriminator: ' + members[i].discriminator
-            result += '\n'
-        await ctx.channel.send(result)
+    members = ctx.guild.members
+    result = ''
+    for i in range(len(members)):
+        result += 'name: ' + members[i].name + ', '
+        result += 'id: ' + str(members[i].id) + ', '
+        result += 'discriminator: ' + members[i].discriminator
+        result += '\n'
+    await ctx.channel.send(result)
 
 
 @bot.command()
 async def get_mode(ctx):
-
     global mode
 
     await ctx.channel.send('mode = {0}'.format(mode))
@@ -177,7 +179,6 @@ async def get_mode(ctx):
 
 @bot.command()
 async def set_mode(ctx, new_mode):
-
     global voice_client
     global mode
 
@@ -203,30 +204,21 @@ async def set_mode(ctx, new_mode):
 
 
 @bot.command()
-async def get_greet(ctx):
-
-    global greet
-
-    await ctx.channel.send('greet = {0}'.format(greet))
+async def get_greet(ctx):#changed
+    await ctx.channel.send('greet = {0}'.format(greeting.get_greet()))
 
 
 @bot.command()
-async def set_greet(ctx, new_greet):
-
-    global greet
-
+async def set_greet(ctx, new_greet):#changed
     new_greet = ' '.join(new_greet.split('_'))
-    await ctx.channel.send('greet = {0}'.format(greet))
+    greeting.set_greet(new_greet)
+    await ctx.channel.send('greet = {0}'.format(greeting.get_greet()))
 
 
 @bot.command()
-async def set_default_greet(ctx):
-
-    global greet
-    global default_greet
-
-    greet = default_greet  # checked
-    await ctx.channel.send('greet = {0}'.format(greet))
+async def set_default_greet(ctx):#changed
+    greeting.set_default_greet()
+    await ctx.channel.send('greet = {0}'.format(greeting.get_greet()))
 
 
 @bot.event
@@ -235,9 +227,9 @@ async def on_ready():
     print(os.name)
 
 
+
 @bot.event
 async def on_voice_state_update(member, before, after):
-
     executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
     global voice_client
     global extra_names_are_available
@@ -250,11 +242,9 @@ async def on_voice_state_update(member, before, after):
         if before.channel is None and after.channel is not None and member.id != bot.user.id:
             if after.channel.guild.me.permissions_in(after.channel).connect:
 
-                print(member)  # debug
+                #                print(member)  # debug
 
                 prepare_file_for_playing(greet_path, after, member)
-
-                # voice_client = discord.VoiceClient()#############ЗАКОММЕНТИТЬ
 
                 if voice_client is None:
                     voice_client = await after.channel.connect()
@@ -266,25 +256,21 @@ async def on_voice_state_update(member, before, after):
 
                 while voice_client.is_playing():
                     await asyncio.sleep(1)
-                    print('sleep_before_playing')  # debug
-##################################################
-#                print("ctypes - Find opus:")
-#                a = ctypes.util.find_library('opus')
-#                print(a)
-#
-#                print("Discord - Load Opus:")
-#                b = discord.opus.load_opus(a)
-#                print(b)
-#
-#                print("Discord - Is loaded:")
-#                c = discord.opus.is_loaded()
-#                print(c)
-#####################################################
-                voice_client.play(discord.FFmpegPCMAudio(source=greet_path))
+                #                    print('sleep_before_playing')  # debug
+
+                if os.name == 'nt':
+                    voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                             source=greet_path))
+                elif os.name == 'posix':
+                    voice_client.play(discord.FFmpegPCMAudio(source=greet_path))
 
                 while voice_client.is_playing():
                     await asyncio.sleep(1)
-                    print('sleep_after_playing')  # debug
+                #                    print('sleep_after_playing')  # debug
+
+                await after.channel.guild.change_voice_state(channel=None,
+                                                             self_mute=False,
+                                                             self_deaf=False)
 
                 if voice_client.is_connected():
                     await voice_client.disconnect()
@@ -292,34 +278,28 @@ async def on_voice_state_update(member, before, after):
 
 bot.run(settings['token'])
 
-
 ########################################################################
 
 
-
-
-
-greet_path = 'greet.mp3'                  # имя файла для записи голоса
+greet_path = 'greet.mp3'  # имя файла для записи голоса
 names_path = 'names.csv'
 names_buffer_path = 'names_buffer.csv'
 help_path = 'help.csv'
-default_greet = 'Приветствую'           # приветствие по умолчанию
-greet = default_greet                   # переменная приветствия
-mode = 1                                # режим работы (0, 1, 2)
-is_connected = False                    # подключен ли бот
-voice_channel_for_mode_2 = None         # голосовой канал для режима №2
-voice_client = None                     # переменная для голосового клиента
+default_greet = 'Приветствую'  # приветствие по умолчанию
+greet = default_greet  # переменная приветствия
+mode = 1  # режим работы (0, 1, 2)
+is_connected = False  # подключен ли бот
+voice_channel_for_mode_2 = None  # голосовой канал для режима №2
+voice_client = None  # переменная для голосового клиента
 extra_names_are_available = False
 
 
-
 def try_to_find_extra_name(name, discriminator, members, path1, path2):
-
     fieldnames = ['id', 'name_and_disc', 'extra_name']
     output = name
 
     path = path1
-    if not os.path.exists(path1):           #### подумать над предупреждением
+    if not os.path.exists(path1):  #### подумать над предупреждением
         if os.path.exists(path2):
             os.rename(path2, path1)
             path = path1
@@ -334,7 +314,7 @@ def try_to_find_extra_name(name, discriminator, members, path1, path2):
                 break
 
     if id == -1:
-        return output###########
+        return output  ###########
 
     with open(path, "r") as f_obj:
         reader = csv.DictReader(f_obj, delimiter=';')
@@ -380,17 +360,17 @@ def prepare_file_for_playing(greet_path, after, member):
     else:
         name = member.name
 
-
-    if file_can_be_made(greet_path, greet, name):               # пробуем новое приветствие и новое имя
+    if file_can_be_made(greet_path, greet, name):  # пробуем новое приветствие и новое имя
         return
-    elif file_can_be_made(greet_path, greet, member.name):      # пробуем новое притствие и обычное имя
+    elif file_can_be_made(greet_path, greet, member.name):  # пробуем новое притствие и обычное имя
         return
-    elif file_can_be_made(greet_path, greet, ''):               # пробуем новое приветствие и без имени
+    elif file_can_be_made(greet_path, greet, ''):  # пробуем новое приветствие и без имени
         return
-    elif file_can_be_made(greet_path, default_greet, ''):        # если ничего не подошло, выдаем дефолтное
+    elif file_can_be_made(greet_path, default_greet, ''):  # если ничего не подошло, выдаем дефолтное
         return
-    file_can_be_made(greet_path, 'Hi', '')                      # если и это не подошло, выдаем англ вариант
+    file_can_be_made(greet_path, 'Hi', '')  # если и это не подошло, выдаем англ вариант
     return
+
 
 class MyClient(discord.Client):
 
@@ -413,25 +393,24 @@ class MyClient(discord.Client):
         lines = message.content.split('\n')
         for line in lines:
 
-            if line.split()[0] == settings['prefix'] + 'hello': # checked
+            if line.split()[0] == settings['prefix'] + 'hello':  # checked
                 await message.channel.send('**Hello World!**')
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'connect': #checked
+            if line.split()[0] == settings['prefix'] + 'connect':  # checked
                 if len(line.split()) > 1:
                     number = line.split()[1]
                     if not number.isdigit():
-                        await message.channel.send('Аргумент должен быть числом') #1
+                        await message.channel.send('Аргумент должен быть числом')  # 1
                         continue
 
-                    number = int(number) # can be float!!!
+                    number = int(number)  # can be float!!!
 
                     if not (1 <= number <= len(message.guild.voice_channels)):
                         await message.channel.send('Неверное число')  # 2
                         continue
 
-                    new_channel = message.guild.voice_channels[number-1]
+                    new_channel = message.guild.voice_channels[number - 1]
 
                     if voice_client is not None:
                         if voice_client.is_connected():
@@ -443,14 +422,13 @@ class MyClient(discord.Client):
                         else:
                             voice_client = await new_channel.connect()
                     else:
-                        voice_client = await message.guild.voice_channels[number-1].connect()
+                        voice_client = await message.guild.voice_channels[number - 1].connect()
 
                     if voice_client.is_connected():
-                        await message.channel.send(f'Успешно подключено к каналу {number}') #3
+                        await message.channel.send(f'Успешно подключено к каналу {number}')  # 3
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'disconnect': # checked
+            if line.split()[0] == settings['prefix'] + 'disconnect':  # checked
                 await message.guild.change_voice_state(channel=None,
                                                        self_mute=False,
                                                        self_deaf=False)
@@ -465,23 +443,20 @@ class MyClient(discord.Client):
                 voice_client = None
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'voice_members_info': #checked
+            if line.split()[0] == settings['prefix'] + 'voice_members_info':  # checked
                 for channel in my_guild.voice_channels:
                     await message.channel.send(channel)
                     for member in channel.members:
                         await message.channel.send(member)
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'members_info':     # информация об участниках канала
-                members = message.guild.members                             #checked
+            if line.split()[0] == settings['prefix'] + 'members_info':  # информация об участниках канала
+                members = message.guild.members  # checked
                 await message.channel.send(members)
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'members_brief_info':     # информация об участниках канала (кратко)
-                members = message.guild.members                                    #checked
+            if line.split()[0] == settings['prefix'] + 'members_brief_info':  # информация об участниках канала (кратко)
+                members = message.guild.members  # checked
                 result = ''
                 for i in range(len(members)):
                     result += 'name: ' + members[i].name + ', '
@@ -491,15 +466,14 @@ class MyClient(discord.Client):
                 await message.channel.send(result)
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'mode':   # режим работы
+            if line.split()[0] == settings['prefix'] + 'mode':  # режим работы
                 if len(line.split()) == 1:
-                    await message.channel.send('mode = {0}'.format(mode)) #1
+                    await message.channel.send('mode = {0}'.format(mode))  # 1
 
                 elif len(line.split()) > 1:
                     mode_new = line.split()[1]
                     if mode_new not in ['0', '1', '2']:
-                        await message.channel.send('Неправильный аргумент') #2
+                        await message.channel.send('Неправильный аргумент')  # 2
                         continue
 
                     mode_new = int(mode_new)
@@ -516,9 +490,8 @@ class MyClient(discord.Client):
                                 voice_client = await voice_channel_for_mode_2.connect()
 
                     mode = mode_new
-                    await message.channel.send('mode = {0}'.format(mode)) #3
+                    await message.channel.send('mode = {0}'.format(mode))  # 3
                 continue
-
 
             if line.split()[0] == settings['prefix'] + 'set_greet':  # установка приветствия checked
                 if len(line.split()) > 1:
@@ -530,12 +503,10 @@ class MyClient(discord.Client):
                 await message.channel.send('greet = {0}'.format(greet))
                 continue
 
-
             if line.split()[0] == settings['prefix'] + 'set_default_greet':  # установка приветствия по умолчанию
-                greet = default_greet                                           # checked
+                greet = default_greet  # checked
                 await message.channel.send('greet = {0}'.format(greet))
                 continue
-
 
             if line.split()[0] == settings['prefix'] + 'set_voice_channel':  #
                 if len(line.split()) > 1:
@@ -543,7 +514,7 @@ class MyClient(discord.Client):
                     voice_channel_for_mode_2_new = voice_channel_for_mode_2
 
                     if line.split()[1].isdigit():
-                        number = int(line.split()[1]) # can be float
+                        number = int(line.split()[1])  # can be float
                         if 1 <= number <= len(message.guild.voice_channels):
 
                             new_guild = message.guild
@@ -555,13 +526,13 @@ class MyClient(discord.Client):
                                 await message.channel.send('Нет доступа к этому каналу')
                                 continue
                         else:
-                            await message.channel.send('Неправильное число') #1
+                            await message.channel.send('Неправильное число')  # 1
                             continue
 
                     elif line.split()[1].lower() == 'none':
                         voice_channel_for_mode_2_new = None
                     else:
-                        await message.channel.send('Неправильный аргумент') #2
+                        await message.channel.send('Неправильный аргумент')  # 2
                         continue
 
                     if mode == 2:
@@ -582,13 +553,12 @@ class MyClient(discord.Client):
                         await message.channel.send('Номер голосового чата сброшен')
                     else:
                         addition = 'Название: ' + voice_channel_for_mode_2.name
-                        await message.channel.send('Номер голосового чата: '+
+                        await message.channel.send('Номер голосового чата: ' +
                                                    str(number) +
-                                                   '\n' + addition)#4
+                                                   '\n' + addition)  # 4
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'set_name':   #
+            if line.split()[0] == settings['prefix'] + 'set_name':  #
 
                 if len(line.split()) > 2:
 
@@ -612,7 +582,7 @@ class MyClient(discord.Client):
                     data = []
                     fieldnames = ['id', 'name_and_disc', 'extra_name']
 
-                    if not os.path.exists(names_path):              #####
+                    if not os.path.exists(names_path):  #####
                         if os.path.exists(names_buffer_path):
                             os.rename(names_buffer_path, names_path)
                         else:
@@ -647,11 +617,10 @@ class MyClient(discord.Client):
                         for row in data:
                             writer.writerow(row)
 
-                    os.remove(names_path)#
-                    os.rename(names_buffer_path, names_path)#
+                    os.remove(names_path)  #
+                    os.rename(names_buffer_path, names_path)  #
                     await message.channel.send('Успешно')
                 continue
-
 
             if line.split()[0] == settings['prefix'] + 'get_name':
                 if len(line.split()) > 1:
@@ -666,7 +635,6 @@ class MyClient(discord.Client):
                         await message.channel.send('Неправильный формат имени пользователя')
                 continue
 
-
             if line.split()[0] == settings['prefix'] + 'extra_names':
                 if len(line.split()) > 1:
                     if line.split()[1] == '0':
@@ -679,8 +647,7 @@ class MyClient(discord.Client):
                         await message.channel.send('Неправильный аргумент')
                 continue
 
-
-            if line.split()[0] == settings['prefix'] + 'help':  #проверено
+            if line.split()[0] == settings['prefix'] + 'help':  # проверено
                 output = ''
                 if len(line.split()) == 1:
                     output += 'Для получения помощи воспользуйтесь следующими командами:\n'
@@ -713,9 +680,9 @@ class MyClient(discord.Client):
 
                         else:
                             for row in reader:
-                                if command == row['Command'][5:5+len(command)]:
+                                if command == row['Command'][5:5 + len(command)]:
                                     output += row['Command'] + '\n'
-                                    output += '\n'.join(row['Description'].split('\\'+'n'))+'\n'
+                                    output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
                                     output += '\n'
 
                         if output == '':
@@ -724,7 +691,6 @@ class MyClient(discord.Client):
                             output = settings['prefix'].join(output.split('$'))
                             await message.channel.send(output)
                 continue
-
 
     async def on_voice_state_update(self, member, before, after):
 
@@ -740,11 +706,11 @@ class MyClient(discord.Client):
             if before.channel is None and after.channel is not None and member.id != client_id:
                 if after.channel.guild.me.permissions_in(after.channel).connect:
 
-                    print(member) # debug
+                    print(member)  # debug
 
                     prepare_file_for_playing(greet_path, after, member)
 
-                    #voice_client = discord.VoiceClient()#############ЗАКОММЕНТИТЬ
+                    # voice_client = discord.VoiceClient()#############ЗАКОММЕНТИТЬ
 
                     if voice_client is None:
                         voice_client = await after.channel.connect()
@@ -754,12 +720,12 @@ class MyClient(discord.Client):
                         await voice_client.disconnect()
                         voice_client = await after.channel.connect()
 
-                    #if not is_connected:
-                        #voice_client_local = await after.channel.connect()
-                        #is_connected = True
-                        #voice_client = voice_client_local
-                    #else:
-                        #voice_client_local = voice_client
+                    # if not is_connected:
+                    # voice_client_local = await after.channel.connect()
+                    # is_connected = True
+                    # voice_client = voice_client_local
+                    # else:
+                    # voice_client_local = voice_client
 
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
@@ -767,11 +733,11 @@ class MyClient(discord.Client):
 
                     voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
                                                              source=greet_path))
-                    #voice_client.play(discord.FFmpegPCMAudio(greet_path))
-                    #except Exception as e:
-                        #await self.guilds[0].text_channels[0].send(e)
-                        #await self.guilds[0].text_channels[0].send(e)
-                        #await asyncio.sleep(1)
+                    # voice_client.play(discord.FFmpegPCMAudio(greet_path))
+                    # except Exception as e:
+                    # await self.guilds[0].text_channels[0].send(e)
+                    # await self.guilds[0].text_channels[0].send(e)
+                    # await asyncio.sleep(1)
 
                     while voice_client.is_playing():
                         await asyncio.sleep(1)
@@ -797,20 +763,19 @@ class MyClient(discord.Client):
                             await voice_client.disconnect()
                             voice_client = await after.channel.connect()
 
-                        #if not is_connected:
-                            #voice_client_local = await after.channel.connect()
-                            #is_connected = True
-                            #voice_client = voice_client_local
-                        #else:
-                            #voice_client_local = voice_client
+                        # if not is_connected:
+                        # voice_client_local = await after.channel.connect()
+                        # is_connected = True
+                        # voice_client = voice_client_local
+                        # else:
+                        # voice_client_local = voice_client
 
                         while voice_client.is_playing():
                             await asyncio.sleep(1)
                             print('sleep_before_playing')  # debug
 
-
-                        #voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                       #source=greet_path))
+                        # voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                        # source=greet_path))
                         while voice_client.is_playing():
                             await asyncio.sleep(1)
                             print('sleep_after_playing')  # debug
@@ -822,24 +787,21 @@ class MyClient(discord.Client):
                                 await voice_client.disconnect()
                                 voice_client = None
 
-
     async def on_guild_channel_delete(self, channel):
         global voice_client
         if voice_client is not None:
             if voice_client.is_connected():
                 if voice_client.channel == channel:
-                    try:                                                    #maybe not important
+                    try:  # maybe not important
                         await voice_client.diconnect()
                     except:
                         pass
                     voice_client = None
 
-
-
     async def on_ready(self):
 
-        print('ready') # debug
+        print('ready')  # debug
 
 
 client = MyClient(intents=intents)
-#client.run(settings['token'])
+# client.run(settings['token'])
