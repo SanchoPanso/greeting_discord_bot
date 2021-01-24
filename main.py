@@ -6,26 +6,11 @@ import os
 import pyttsx3
 from config import settings
 from my_module import Greeting, ModeManager
-from my_module import connecting, disconnecting
+from my_module import connecting, disconnecting, is_connected
+from my_module import is_right_form_of_name_and_disc
 
 greeting = Greeting()
 mode_manager = ModeManager()
-
-###
-greet_path = 'greet.mp3'  # имя файла для записи голоса
-names_path = 'names.csv'
-names_buffer_path = 'names_buffer.csv'
-help_path = 'help.csv'
-default_greet = 'Приветствую'  # приветствие по умолчанию
-greet = default_greet  # переменная приветствия
-mode = 1  # режим работы (0, 1, 2)
-is_connected = False  # подключен ли бот
-voice_channel_for_mode_2 = None  # голосовой канал для режима №2
-voice_client = None  # переменная для голосового клиента
-extra_names_are_available = False
-
-
-###
 
 intents = discord.Intents.default()
 intents.members = True
@@ -34,13 +19,11 @@ bot = commands.Bot(command_prefix=settings['prefix'],
                    intents=intents)
 
 
-@bot.command(pass_context=True)
-async def test(ctx, arg):
-    await ctx.send(arg)
-
-
 @bot.command()
 async def hello(ctx):
+    """
+    Send "Hello World!"
+    """
     await ctx.channel.send('**Hello World!**')
 
 
@@ -68,6 +51,21 @@ async def disconnect(ctx):
     await ctx.guild.change_voice_state(channel=None,
                                        self_mute=False,
                                        self_deaf=False)
+
+
+@bot.command()
+async def play_greet(ctx):
+    executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
+    if is_connected(bot):
+        voice_client = bot.voice_clients[0]
+        if os.name == 'nt':
+            voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                     source=greeting.greet_path))
+        elif os.name == 'posix':
+            voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
+
+        while voice_client.is_playing():
+            await asyncio.sleep(1)
 
 
 @bot.command()
@@ -108,7 +106,7 @@ async def set_mode(ctx, new_mode):
         return
     new_mode = int(new_mode)
     await mode_manager.set_mode(bot, new_mode)
-    await ctx.channel.send('mode = {0}'.format(mode))  # 3
+    await ctx.channel.send('mode = {0}'.format(mode_manager.get_mode()))  # 3
 
 
 @bot.command()
@@ -183,15 +181,61 @@ async def get_name(ctx, name_and_disc):
 @bot.command()
 async def extra_names(ctx, arg):
     if arg == '0':
-        greeting.extra_on()
-        await ctx.channel.send('Дополнительные именя теперь не доступны')
+        greeting.extra_off()
+        await ctx.channel.send('Дополнительные имена теперь не доступны')
 
     elif arg == '1':
-        greeting.extra_off()
-        await ctx.channel.send('Дополнительные именя теперь доступны')
+        greeting.extra_on()
+        await ctx.channel.send('Дополнительные имена теперь доступны')
 
     else:
         await ctx.channel.send('Неправильный аргумент')
+
+
+@bot.command()####aaaaaaaaa
+async def help_(ctx, *arg):
+    output = ''
+    if len(arg) == 0:
+        output += 'Для получения помощи воспользуйтесь следующими командами:\n'
+        output += '**{0}help list** - '.format(settings['prefix'])
+        output += 'вывод списка команд;\n'
+        output += '**{0}help** [*command*] - '.format(settings['prefix'])
+        output += 'вывод описания команды, '
+        output += 'где [*command*] - название команды без префикса и аргументов'
+        output += '(в настоящее время префикс **{0}**);\n'.format(settings['prefix'])
+        output += '**{0}help all** - '.format(settings['prefix'])
+        output += 'вывод описания всех команд.\n'
+        await ctx.channel.send(output)
+
+    elif len(arg) > 1:
+        with open(help_path, "r") as f_obj:
+            reader = csv.DictReader(f_obj, delimiter=';')
+            command = arg[1]
+
+            if command == 'list':
+                for row in reader:
+                    output += row['Command'] + '\n'
+
+            elif command == 'all':
+                for row in reader:
+                    output = ''
+                    output += row['Command'] + '\n'
+                    output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
+                    output += '\n'
+                    await ctx.channel.send(output)
+
+            else:
+                for row in reader:
+                    if command == row['Command'][5: 5+len(command)]:
+                        output += row['Command'] + '\n'
+                        output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
+                        output += '\n'
+
+            if output == '':
+                await ctx.channel.send('Такой команды нет')
+            else:
+                output = settings['prefix'].join(output.split('$'))
+                await ctx.channel.send(output)
 
 
 @bot.event
@@ -205,7 +249,7 @@ async def on_ready():
 async def on_voice_state_update(member, before, after):
     executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
 
-    if mode == 1:
+    if mode_manager.mode == 1:
 
         cond1 = before.channel is not after.channel
         cond2 = after.channel is not None
@@ -235,6 +279,38 @@ async def on_voice_state_update(member, before, after):
             # print('sleep_after_playing')  # debug
 
             await disconnecting(bot)
+
+    elif mode_manager.mode == 2:
+
+            if mode_manager.voice_channel_for_mode_2 is not None and member.id != bot.user.id:
+
+                if before.channel != mode_manager.voice_channel_for_mode_2:
+                    if after.channel == mode_manager.voice_channel_for_mode_2:
+
+                        greeting.prepare_file_for_playing(after, member)
+
+                        voice_client = await connecting(bot, after.channel)
+
+                        while voice_client.is_playing():
+                            await asyncio.sleep(1)
+                            # print('sleep_before_playing')  # debug
+
+                        if os.name == 'nt':
+                            voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                                     source=greeting.greet_path))
+                        elif os.name == 'posix':
+                            voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
+
+                        while voice_client.is_playing():
+                            await asyncio.sleep(1)
+                            # print('sleep_after_playing')  # debug
+
+                if before.channel == mode_manager.voice_channel_for_mode_2:
+                    if after.channel != mode_manager.voice_channel_for_mode_2:
+                        if is_connected(bot):
+                            voice_client = bot.voice_clients[0]
+                            if len(mode_manager.voice_channel_for_mode_2.members) == 1:
+                                await voice_client.disconnect()
 
 
 bot.run(settings['token'])
