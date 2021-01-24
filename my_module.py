@@ -17,23 +17,39 @@ def is_connected(client):
             return False
 
 
-def connecting(client, given_channel):
+async def connecting(client, given_channel):
     if is_connected(client):
         voice_client = client.voice_clients[0]
+
+        while voice_client.is_playing():
+            await sleep(1)
+
         if voice_client.channel != given_channel:
             await voice_client.disconnect()
             voice_client = await given_channel.connect()
-
     else:
         voice_client = await given_channel.connect()
 
     return voice_client
 
 
-def disconnecting(client):
+async def disconnecting(client):
     if is_connected(client):
         voice_client = client.voice_clients[0]
+        while voice_client.is_playing():
+            await sleep(1)
         await voice_client.disconnect()
+
+
+def is_right_form_of_name_and_disc(name_and_disc):
+    if len(name_and_disc) <= 4:
+        return False
+
+    if len(name_and_disc) > 5:
+        if name_and_disc[-5] != '#' or (not name_and_disc[-4:].isdigit()):
+            return False
+
+    return True
 
 
 class Greeting:
@@ -127,6 +143,65 @@ class Greeting:
         # если и это не подошло, выдаем англ вариант
         self.file_can_be_made('Hi', '')
 
+    def set_name(self, name_and_disc, extra_name, members):
+        id = -1
+        for member in members:
+            if member.discriminator == name_and_disc[-4:]:
+                if member.name == name_and_disc[:-5]:
+                    id = member.id
+
+        if id == -1:
+            return 'Пользователя нет в списке участников сервера'
+
+        data = []
+        fieldnames = ['id', 'name_and_disc', 'extra_name']
+
+        if not os.path.exists(self.names_path):
+            if os.path.exists(self.names_buffer_path):
+                os.rename(self.names_buffer_path, self.names_path)
+            else:
+                return 'Файл с именами не найден'
+
+        with open(self.names_path, "r") as f_obj:
+            reader = csv.DictReader(f_obj, delimiter=';')
+            for row in reader:
+                data.append({fieldnames[0]: row[fieldnames[0]],
+                             fieldnames[1]: row[fieldnames[1]],
+                             fieldnames[2]: row[fieldnames[2]]})
+
+        n = -1
+        for i in range(len(data)):
+            if data[i][fieldnames[0]] == str(id):
+                n = i
+                break
+
+        if n == -1:
+            data.append({fieldnames[0]: id,
+                         fieldnames[1]: name_and_disc,
+                         fieldnames[2]: extra_name})
+        else:
+            data[n] = {fieldnames[0]: id,
+                       fieldnames[1]: name_and_disc,
+                       fieldnames[2]: extra_name}
+
+        with open(self.names_buffer_path, "w", newline='') as out_file:
+            writer = csv.DictWriter(out_file, delimiter=';', fieldnames=fieldnames)
+            writer.writeheader()
+            for row in data:
+                writer.writerow(row)
+
+        os.remove(self.names_path)
+        os.rename(self.names_buffer_path, self.names_path)
+        return 'Успешно'
+
+    def get_name(self, name_and_disc, members):
+        if is_right_form_of_name_and_disc(name_and_disc):
+            return self.try_to_find_extra_name(name_and_disc[:-5],
+                                               name_and_disc[-4:],
+                                               members)
+        else:
+            return 'Неправильный формат имени пользователя'
+
 
 class ModeManager:
     def __init__(self):
@@ -136,29 +211,29 @@ class ModeManager:
     def get_mode(self):
         return self.mode
 
-    def set_mode(self, client, new_mode):
+    async def set_mode(self, client, new_mode):
         if is_connected(client) and self.mode != new_mode:
             voice_client = client.voice_clients[0]
             while voice_client.is_playing():
                 await sleep(1)
-            disconnecting(client)
+            await disconnecting(client)
 
         if new_mode == 2:
             if self.voice_channel_for_mode_2 is not None:
                 if len(self.voice_channel_for_mode_2.members) > 0:
-                    connecting(client, self.voice_channel_for_mode_2)
+                    await connecting(client, self.voice_channel_for_mode_2)
 
         self.mode = new_mode
 
-    def set_voice_channel(self, client, new_channel):
+    async def set_voice_channel(self, client, new_channel):
         if self.mode == 2:
             if self.voice_channel_for_mode_2 != new_channel:
                 if self.voice_channel_for_mode_2 is not None:
-                    disconnecting(client)
+                    await disconnecting(client)
 
                 if new_channel is not None:
                     if len(new_channel.members) > 0:
-                        connecting(client, new_channel)
+                        await connecting(client, new_channel)
 
         self.voice_channel_for_mode_2 = new_channel
 

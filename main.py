@@ -4,13 +4,12 @@ import asyncio
 import csv
 import os
 import pyttsx3
-import pandas as pd
-import ctypes
-import ctypes.util
 from config import settings
-from my_module import Greeting
+from my_module import Greeting, ModeManager
+from my_module import connecting, disconnecting
 
 greeting = Greeting()
+mode_manager = ModeManager()
 
 ###
 greet_path = 'greet.mp3'  # имя файла для записи голоса
@@ -27,65 +26,6 @@ extra_names_are_available = False
 
 
 ###
-
-
-def is_connected(voice_client):
-    if voice_client is None:
-        return False
-
-    else:
-        if voice_client.is_connected():
-            return True
-        else:
-            return False
-
-
-def try_to_find_extra_name(name, discriminator, members, path1, path2):
-    fieldnames = ['id', 'name_and_disc', 'extra_name']
-    output = name
-
-    path = path1
-    if not os.path.exists(path1):  #### подумать над предупреждением
-        if os.path.exists(path2):
-            os.rename(path2, path1)
-            path = path1
-        else:
-            return output
-
-    id = -1
-    for member in members:
-        if discriminator == member.discriminator:
-            if name == member.name:
-                id = member.id
-                break
-
-    if id == -1:
-        return output  ###########
-
-
-def file_can_be_made(greet_path, greet, name):
-    try:
-        mes = greet + ', ' + name
-        print(mes)
-        engine = pyttsx3.init()
-        engine.save_to_file(mes, greet_path)
-        engine.runAndWait()
-        return True
-    except:
-        return False
-
-
-def prepare_file_for_playing(greet_path, after, member):
-    global default_greet
-    if extra_names_are_available:
-        name = try_to_find_extra_name(member.name,
-                                      member.discriminator,
-                                      after.channel.guild.members,
-                                      names_path,
-                                      names_buffer_path)
-    else:
-        name = member.name
-
 
 intents = discord.Intents.default()
 intents.members = True
@@ -120,28 +60,14 @@ async def connect(ctx, number):
 
     new_channel = ctx.guild.voice_channels[number - 1]
 
-    if is_connected(voice_client):
-        if voice_client.channel != new_channel:
-            await voice_client.disconnect()
-            voice_client = await new_channel.connect()
-        else:
-            pass
-    else:
-        voice_client = await new_channel.connect()
-
-
-#    if voice_client.is_connected():# now is useless
-#        await message.channel.send(f'Успешно подключено к каналу {number}')
+    await connecting(bot, new_channel)
 
 
 @bot.command()
 async def disconnect(ctx):
-    global voice_client
-
     await ctx.guild.change_voice_state(channel=None,
                                        self_mute=False,
                                        self_deaf=False)
-    voice_client = None
 
 
 @bot.command()
@@ -172,53 +98,100 @@ async def members_brief_info(ctx):
 
 @bot.command()
 async def get_mode(ctx):
-    global mode
-
-    await ctx.channel.send('mode = {0}'.format(mode))
+    await ctx.channel.send('mode = {0}'.format(mode_manager.get_mode()))
 
 
 @bot.command()
 async def set_mode(ctx, new_mode):
-    global voice_client
-    global mode
-
     if new_mode not in ['0', '1', '2']:
         await ctx.channel.send('Неправильный аргумент')  # 2
         return
-
     new_mode = int(new_mode)
-
-    if voice_client is not None and mode != new_mode:
-        while voice_client.is_playing():  #####
-            await asyncio.sleep(1)
-        if voice_client.is_connected():
-            await voice_client.disconnect()
-
-    if new_mode == 2:
-        if voice_channel_for_mode_2 is not None:
-            if len(voice_channel_for_mode_2.members) > 0:
-                voice_client = await voice_channel_for_mode_2.connect()
-
-    mode = new_mode
+    await mode_manager.set_mode(bot, new_mode)
     await ctx.channel.send('mode = {0}'.format(mode))  # 3
 
 
 @bot.command()
-async def get_greet(ctx):#changed
+async def get_greet(ctx):
     await ctx.channel.send('greet = {0}'.format(greeting.get_greet()))
 
 
 @bot.command()
-async def set_greet(ctx, new_greet):#changed
+async def set_greet(ctx, new_greet):
     new_greet = ' '.join(new_greet.split('_'))
     greeting.set_greet(new_greet)
     await ctx.channel.send('greet = {0}'.format(greeting.get_greet()))
 
 
 @bot.command()
-async def set_default_greet(ctx):#changed
+async def set_default_greet(ctx):
     greeting.set_default_greet()
     await ctx.channel.send('greet = {0}'.format(greeting.get_greet()))
+
+
+@bot.command()
+async def set_voice_channel(ctx, number):
+    new_channel = mode_manager.voice_channel_for_mode_2
+
+    if number.isdigit():
+        number = int(number)
+        if 1 <= number <= len(ctx.guild.voice_channels):
+            new_guild = ctx.guild
+            new_channel = ctx.guild.voice_channels[number - 1]
+
+            if not new_guild.me.permissions_in(new_channel).connect:
+                await ctx.channel.send('Нет доступа к этому каналу')
+                return
+        else:
+            await ctx.channel.send('Неправильное число')  # 1
+            return
+
+    elif number.lower() == 'none':
+        new_channel = None
+    else:
+        await ctx.channel.send('Неправильный аргумент')  # 2
+        return
+
+    await mode_manager.set_voice_channel(bot, new_channel)
+
+    if mode_manager.voice_channel_for_mode_2 is None:
+        await ctx.channel.send('Номер голосового чата сброшен')
+    else:
+        addition = 'Название: ' + mode_manager.voice_channel_for_mode_2.name
+        await ctx.channel.send('Номер голосового чата: ' +
+                               str(number) +
+                               '\n' + addition)  # 4
+
+
+@bot.command()
+async def set_name(ctx, name_and_disc, extra_name):
+    extra_name = ' '.join(extra_name.split('_'))
+
+    if not is_right_form_of_name_and_disc(name_and_disc):
+        await ctx.channel.send('Неправильный формат имени пользователя')
+        return
+
+    mes = greeting.set_name(name_and_disc, extra_name, ctx.guild.members)
+    await ctx.channel.send(mes)
+
+
+@bot.command()
+async def get_name(ctx, name_and_disc):
+    await ctx.channel.send(greeting.get_name(name_and_disc, ctx.guild.members))
+
+
+@bot.command()
+async def extra_names(ctx, arg):
+    if arg == '0':
+        greeting.extra_on()
+        await ctx.channel.send('Дополнительные именя теперь не доступны')
+
+    elif arg == '1':
+        greeting.extra_off()
+        await ctx.channel.send('Дополнительные именя теперь доступны')
+
+    else:
+        await ctx.channel.send('Неправильный аргумент')
 
 
 @bot.event
@@ -231,49 +204,37 @@ async def on_ready():
 @bot.event
 async def on_voice_state_update(member, before, after):
     executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
-    global voice_client
-    global extra_names_are_available
-    global names_path
-    global names_buffer_path
-    global greet_path
 
     if mode == 1:
 
-        if before.channel is None and after.channel is not None and member.id != bot.user.id:
-            if after.channel.guild.me.permissions_in(after.channel).connect:
+        cond1 = before.channel is not after.channel
+        cond2 = after.channel is not None
+        cond3 = member.id != bot.user.id
+        cond4 = after.channel.guild.me.permissions_in(after.channel).connect if cond2 else False
 
-                #                print(member)  # debug
+        all_conditions_are_true = cond1 and cond2 and cond3 and cond4
 
-                prepare_file_for_playing(greet_path, after, member)
+        if all_conditions_are_true:
+            # print(member)  # debug
+            greeting.prepare_file_for_playing(after, member)
 
-                if voice_client is None:
-                    voice_client = await after.channel.connect()
-                elif not voice_client.is_connected():
-                    voice_client = await after.channel.connect()
-                elif voice_client.channel != after:
-                    await voice_client.disconnect()
-                    voice_client = await after.channel.connect()
+            voice_client = await connecting(bot, after.channel)
 
-                while voice_client.is_playing():
-                    await asyncio.sleep(1)
-                #                    print('sleep_before_playing')  # debug
+            while voice_client.is_playing():
+                await asyncio.sleep(1)
+            # print('sleep_before_playing')  # debug
 
-                if os.name == 'nt':
-                    voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                             source=greet_path))
-                elif os.name == 'posix':
-                    voice_client.play(discord.FFmpegPCMAudio(source=greet_path))
+            if os.name == 'nt':
+                voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                         source=greeting.greet_path))
+            elif os.name == 'posix':
+                voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
 
-                while voice_client.is_playing():
-                    await asyncio.sleep(1)
-                #                    print('sleep_after_playing')  # debug
+            while voice_client.is_playing():
+                await asyncio.sleep(1)
+            # print('sleep_after_playing')  # debug
 
-                await after.channel.guild.change_voice_state(channel=None,
-                                                             self_mute=False,
-                                                             self_deaf=False)
-
-                if voice_client.is_connected():
-                    await voice_client.disconnect()
+            await disconnecting(bot)
 
 
 bot.run(settings['token'])
@@ -563,7 +524,7 @@ class MyClient(discord.Client):
                 if len(line.split()) > 2:
 
                     name_and_disc = line.split()[1]
-                    extra_name = ' '.join(line.split(' ')[2:])
+                    extra_name = ' '.join(line.split('_'))
 
                     if not is_right_form_of_name_and_disc(name_and_disc):
                         await message.channel.send('Неправильный формат имени пользователя')
