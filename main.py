@@ -192,57 +192,10 @@ async def extra_names(ctx, arg):
         await ctx.channel.send('Неправильный аргумент')
 
 
-@bot.command()####aaaaaaaaa
-async def help_(ctx, *arg):
-    output = ''
-    if len(arg) == 0:
-        output += 'Для получения помощи воспользуйтесь следующими командами:\n'
-        output += '**{0}help list** - '.format(settings['prefix'])
-        output += 'вывод списка команд;\n'
-        output += '**{0}help** [*command*] - '.format(settings['prefix'])
-        output += 'вывод описания команды, '
-        output += 'где [*command*] - название команды без префикса и аргументов'
-        output += '(в настоящее время префикс **{0}**);\n'.format(settings['prefix'])
-        output += '**{0}help all** - '.format(settings['prefix'])
-        output += 'вывод описания всех команд.\n'
-        await ctx.channel.send(output)
-
-    elif len(arg) > 1:
-        with open(help_path, "r") as f_obj:
-            reader = csv.DictReader(f_obj, delimiter=';')
-            command = arg[1]
-
-            if command == 'list':
-                for row in reader:
-                    output += row['Command'] + '\n'
-
-            elif command == 'all':
-                for row in reader:
-                    output = ''
-                    output += row['Command'] + '\n'
-                    output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
-                    output += '\n'
-                    await ctx.channel.send(output)
-
-            else:
-                for row in reader:
-                    if command == row['Command'][5: 5+len(command)]:
-                        output += row['Command'] + '\n'
-                        output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
-                        output += '\n'
-
-            if output == '':
-                await ctx.channel.send('Такой команды нет')
-            else:
-                output = settings['prefix'].join(output.split('$'))
-                await ctx.channel.send(output)
-
-
 @bot.event
 async def on_ready():
     print('Ready!')
     print(os.name)
-
 
 
 @bot.event
@@ -268,6 +221,8 @@ async def on_voice_state_update(member, before, after):
                 await asyncio.sleep(1)
             # print('sleep_before_playing')  # debug
 
+            await asyncio.sleep(1)
+
             if os.name == 'nt':
                 voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
                                                          source=greeting.greet_path))
@@ -281,36 +236,36 @@ async def on_voice_state_update(member, before, after):
             await disconnecting(bot)
 
     elif mode_manager.mode == 2:
+        if mode_manager.voice_channel_for_mode_2 is not None and member.id != bot.user.id:
 
-            if mode_manager.voice_channel_for_mode_2 is not None and member.id != bot.user.id:
+            if before.channel != mode_manager.voice_channel_for_mode_2:
+                if after.channel == mode_manager.voice_channel_for_mode_2:
 
-                if before.channel != mode_manager.voice_channel_for_mode_2:
-                    if after.channel == mode_manager.voice_channel_for_mode_2:
+                    greeting.prepare_file_for_playing(after, member)
 
-                        greeting.prepare_file_for_playing(after, member)
+                    voice_client = await connecting(bot, after.channel)
 
-                        voice_client = await connecting(bot, after.channel)
+                    while voice_client.is_playing():
+                        await asyncio.sleep(1)
+                        # print('sleep_before_playing')  # debug
+                    await asyncio.sleep(1)
 
-                        while voice_client.is_playing():
-                            await asyncio.sleep(1)
-                            # print('sleep_before_playing')  # debug
+                    if os.name == 'nt':
+                        voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
+                                                                source=greeting.greet_path))
+                    elif os.name == 'posix':
+                        voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
 
-                        if os.name == 'nt':
-                            voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                     source=greeting.greet_path))
-                        elif os.name == 'posix':
-                            voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
+                    while voice_client.is_playing():
+                        await asyncio.sleep(1)
+                        # print('sleep_after_playing')  # debug
 
-                        while voice_client.is_playing():
-                            await asyncio.sleep(1)
-                            # print('sleep_after_playing')  # debug
-
-                if before.channel == mode_manager.voice_channel_for_mode_2:
-                    if after.channel != mode_manager.voice_channel_for_mode_2:
-                        if is_connected(bot):
-                            voice_client = bot.voice_clients[0]
-                            if len(mode_manager.voice_channel_for_mode_2.members) == 1:
-                                await voice_client.disconnect()
+            if before.channel == mode_manager.voice_channel_for_mode_2:
+                if after.channel != mode_manager.voice_channel_for_mode_2:
+                    if is_connected(bot):
+                        voice_client = bot.voice_clients[0]
+                        if len(mode_manager.voice_channel_for_mode_2.members) == 1:
+                            await voice_client.disconnect()
 
 
 bot.run(settings['token'])
@@ -740,7 +695,7 @@ class MyClient(discord.Client):
 
         if mode == 1:
 
-            if before.channel is None and after.channel is not None and member.id != client_id:
+            if before.channel is None and after.channel is not None and member.id != 0:
                 if after.channel.guild.me.permissions_in(after.channel).connect:
 
                     print(member)  # debug
@@ -785,7 +740,7 @@ class MyClient(discord.Client):
 
         elif mode == 2:
 
-            if voice_channel_for_mode_2 is not None and member.id != client_id:
+            if voice_channel_for_mode_2 is not None and member.id != 0:
 
                 if before.channel != voice_channel_for_mode_2:
                     if after.channel == voice_channel_for_mode_2:
@@ -842,3 +797,50 @@ class MyClient(discord.Client):
 
 client = MyClient(intents=intents)
 # client.run(settings['token'])
+
+
+
+
+async def help_(ctx, *arg):
+    output = ''
+    if len(arg) == 0:
+        output += 'Для получения помощи воспользуйтесь следующими командами:\n'
+        output += '**{0}help list** - '.format(settings['prefix'])
+        output += 'вывод списка команд;\n'
+        output += '**{0}help** [*command*] - '.format(settings['prefix'])
+        output += 'вывод описания команды, '
+        output += 'где [*command*] - название команды без префикса и аргументов'
+        output += '(в настоящее время префикс **{0}**);\n'.format(settings['prefix'])
+        output += '**{0}help all** - '.format(settings['prefix'])
+        output += 'вывод описания всех команд.\n'
+        await ctx.channel.send(output)
+
+    elif len(arg) > 1:
+        with open(help_path, "r") as f_obj:
+            reader = csv.DictReader(f_obj, delimiter=';')
+            command = arg[1]
+
+            if command == 'list':
+                for row in reader:
+                    output += row['Command'] + '\n'
+
+            elif command == 'all':
+                for row in reader:
+                    output = ''
+                    output += row['Command'] + '\n'
+                    output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
+                    output += '\n'
+                    await ctx.channel.send(output)
+
+            else:
+                for row in reader:
+                    if command == row['Command'][5: 5+len(command)]:
+                        output += row['Command'] + '\n'
+                        output += '\n'.join(row['Description'].split('\\' + 'n')) + '\n'
+                        output += '\n'
+
+            if output == '':
+                await ctx.channel.send('Такой команды нет')
+            else:
+                output = settings['prefix'].join(output.split('$'))
+                await ctx.channel.send(output)
