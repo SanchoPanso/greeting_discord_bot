@@ -2,7 +2,10 @@ import discord
 from discord.ext import commands
 import asyncio
 import os
-from config import settings
+from os import getenv
+from sys import exit
+
+from config import settings, paths
 
 from connection_module import connecting, disconnecting, is_connected
 
@@ -10,6 +13,7 @@ from mode_manager_module import ModeManager
 
 from greeting_module import is_right_form_of_name_and_disc  #!!!
 from greeting_module import Greeting
+
 
 greeting = Greeting()
 mode_manager = ModeManager()
@@ -38,7 +42,6 @@ async def connect(ctx, number):
     :param number: the number of the voice channel to which you want to connect (numbering begins with one(!?))
     :return: nothing
     """
-    global voice_client     # may be it needs to be removed
 
     if not number.isdigit():
         await ctx.channel.send('Неправильный аргумент')  # 1
@@ -220,12 +223,12 @@ async def extra_names(ctx, arg):
 @bot.event
 async def on_ready():
     print('Ready!')
-    print(os.name)
+    print(f"OS is {os.name}")
 
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
+    executable_path = paths['executable_path']
 
     if mode_manager.mode == 1:
 
@@ -277,7 +280,7 @@ async def on_voice_state_update(member, before, after):
 
                     if os.name == 'nt':
                         voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                source=greeting.greet_path))
+                                                                 source=greeting.greet_path))
                     elif os.name == 'posix':
                         voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
 
@@ -293,5 +296,9 @@ async def on_voice_state_update(member, before, after):
                             await voice_client.disconnect()
 
 
-bot.run(settings['token'])
+bot_token = getenv("BOT_TOKEN")
+if not bot_token:
+    exit("Error: no token provided")
+
+bot.run(bot_token)
 
