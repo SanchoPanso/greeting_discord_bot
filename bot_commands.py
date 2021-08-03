@@ -1,22 +1,6 @@
-import discord
-from discord.ext import commands
-import asyncio
-import csv
-import os
-import pyttsx3
-from config import settings
-from my_module import Greeting, ModeManager
+from bot import bot
 from my_module import connecting, disconnecting, is_connected
 from my_module import is_right_form_of_name_and_disc
-
-greeting = Greeting()
-mode_manager = ModeManager()
-
-intents = discord.Intents.default()
-intents.members = True
-
-bot = commands.Bot(command_prefix=settings['prefix'],
-                   intents=intents)
 
 
 @bot.command()
@@ -213,84 +197,3 @@ async def extra_names(ctx, arg):
 
     else:
         await ctx.channel.send('Неправильный аргумент')
-
-
-@bot.event
-async def on_ready():
-    print('Ready!')
-    print(os.name)
-
-
-@bot.event
-async def on_voice_state_update(member, before, after):
-    executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
-
-    if mode_manager.mode == 1:
-
-        cond1 = before.channel is not after.channel
-        cond2 = after.channel is not None
-        cond3 = member.id != bot.user.id
-        cond4 = after.channel.guild.me.permissions_in(after.channel).connect if cond2 else False
-
-        all_conditions_are_true = cond1 and cond2 and cond3 and cond4
-
-        if all_conditions_are_true:
-            # print(member)  # debug
-            greeting.prepare_file_for_playing(after, member)
-
-            voice_client = await connecting(bot, after.channel)
-
-            while voice_client.is_playing():
-                await asyncio.sleep(1)
-            # print('sleep_before_playing')  # debug
-
-            # await asyncio.sleep(1)
-
-            if os.name == 'nt':
-                voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                         source=greeting.greet_path))
-            elif os.name == 'posix':
-                voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
-
-            while voice_client.is_playing():
-                await asyncio.sleep(1)
-            # print('sleep_after_playing')  # debug
-
-            await disconnecting(bot)
-
-    elif mode_manager.mode == 2:
-        if mode_manager.voice_channel_for_mode_2 is not None and member.id != bot.user.id:
-
-            if before.channel != mode_manager.voice_channel_for_mode_2:
-                if after.channel == mode_manager.voice_channel_for_mode_2:
-
-                    greeting.prepare_file_for_playing(after, member)
-
-                    voice_client = await connecting(bot, after.channel)
-
-                    while voice_client.is_playing():
-                        await asyncio.sleep(1)
-                        # print('sleep_before_playing')  # debug
-                    await asyncio.sleep(1)
-
-                    if os.name == 'nt':
-                        voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,
-                                                                source=greeting.greet_path))
-                    elif os.name == 'posix':
-                        voice_client.play(discord.FFmpegPCMAudio(source=greeting.greet_path))
-
-                    while voice_client.is_playing():
-                        await asyncio.sleep(1)
-                        # print('sleep_after_playing')  # debug
-
-            if before.channel == mode_manager.voice_channel_for_mode_2:
-                if after.channel != mode_manager.voice_channel_for_mode_2:
-                    if is_connected(bot):
-                        voice_client = bot.voice_clients[0]
-                        if len(mode_manager.voice_channel_for_mode_2.members) == 1:
-                            await voice_client.disconnect()
-
-
-bot.run(settings['token'])
-
-########################################################################
