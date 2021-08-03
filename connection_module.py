@@ -3,7 +3,7 @@ import pyttsx3
 import os
 import csv
 from config import settings, paths
-from asyncio import sleep
+import asyncio
 
 
 def is_connected(client):
@@ -22,7 +22,7 @@ async def connecting(client, given_channel):
         voice_client = client.voice_clients[0]
 
         while voice_client.is_playing():
-            await sleep(1)
+            await asyncio.sleep(1)
 
         if voice_client.channel != given_channel:
             await voice_client.disconnect()
@@ -37,7 +37,7 @@ async def disconnecting(client):
     if is_connected(client):
         voice_client = client.voice_clients[0]
         while voice_client.is_playing():
-            await sleep(1)
+            await asyncio.sleep(1)
         await voice_client.disconnect()
 
 
@@ -215,7 +215,7 @@ class ModeManager:
         if is_connected(client) and self.mode != new_mode:
             voice_client = client.voice_clients[0]
             while voice_client.is_playing():
-                await sleep(1)
+                await asyncio.sleep(1)
             await disconnecting(client)
 
         if new_mode == 2:

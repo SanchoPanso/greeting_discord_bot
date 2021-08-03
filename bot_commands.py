@@ -1,6 +1,6 @@
 from bot import bot
-from my_module import connecting, disconnecting, is_connected
-from my_module import is_right_form_of_name_and_disc
+from connection_module import connecting, disconnecting, is_connected
+from connection_module import is_right_form_of_name_and_disc
 
 
 @bot.command()

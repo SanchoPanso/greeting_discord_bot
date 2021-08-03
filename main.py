@@ -1,13 +1,15 @@
 import discord
 from discord.ext import commands
 import asyncio
-import csv
 import os
-import pyttsx3
 from config import settings
-from my_module import Greeting, ModeManager
-from my_module import connecting, disconnecting, is_connected
-from my_module import is_right_form_of_name_and_disc
+
+from connection_module import connecting, disconnecting, is_connected
+
+from mode_manager_module import ModeManager
+
+from greeting_module import is_right_form_of_name_and_disc  #!!!
+from greeting_module import Greeting
 
 greeting = Greeting()
 mode_manager = ModeManager()
@@ -293,4 +295,3 @@ async def on_voice_state_update(member, before, after):
 
 bot.run(settings['token'])
 
-########################################################################
