@@ -11,7 +11,6 @@ from connection_module import connecting, disconnecting, is_connected
 
 from mode_manager_module import ModeManager
 
-from greeting_module import is_right_form_of_name_and_disc  #!!!
 from greeting_module import Greeting
 
 
@@ -192,11 +191,6 @@ async def set_voice_channel(ctx, number):
 @bot.command()
 async def set_name(ctx, name_and_disc, extra_name):
     extra_name = ' '.join(extra_name.split('_'))
-
-    if not is_right_form_of_name_and_disc(name_and_disc):
-        await ctx.channel.send('Неправильный формат имени пользователя')
-        return
-
     mes = greeting.set_name(name_and_disc, extra_name, ctx.guild.members)
     await ctx.channel.send(mes)
 

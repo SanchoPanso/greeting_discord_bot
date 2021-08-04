@@ -107,13 +107,16 @@ class Greeting:
         self.file_can_be_made('Hi', '')
 
     def set_name(self, name_and_disc, extra_name, members):     # solve problem with checking and big size
-        id = -1
+        if not is_right_form_of_name_and_disc(name_and_disc):
+            return 'Неправильный формат имени пользователя'
+
+        member_id = -1
         for member in members:
             if member.discriminator == name_and_disc[-4:]:
                 if member.name == name_and_disc[:-5]:
-                    id = member.id
+                    member_id = member.id
 
-        if id == -1:
+        if member_id == -1:
             return 'Пользователя нет в списке участников сервера'
 
         data = []
@@ -139,11 +142,11 @@ class Greeting:
                 break
 
         if n == -1:
-            data.append({fieldnames[0]: id,
+            data.append({fieldnames[0]: member_id,
                          fieldnames[1]: name_and_disc,
                          fieldnames[2]: extra_name})
         else:
-            data[n] = {fieldnames[0]: id,
+            data[n] = {fieldnames[0]: member_id,
                        fieldnames[1]: name_and_disc,
                        fieldnames[2]: extra_name}
 
