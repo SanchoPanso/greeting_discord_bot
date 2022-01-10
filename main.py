@@ -6,11 +6,8 @@ from os import getenv
 from sys import exit
 
 from config import settings, paths
-
 from connection_module import connecting, disconnecting, is_connected
-
 from mode_manager_module import ModeManager
-
 from greeting_module import Greeting
 
 
@@ -76,7 +73,7 @@ async def play_greet(ctx):
     :param ctx:
     :return:
     """
-    executable_path = "ffmpeg-20200831-4a11a6f-win64-static/bin/ffmpeg.exe"
+    executable_path = paths['executable_path']
     if is_connected(bot):
         voice_client = bot.voice_clients[0]
         if os.name == 'nt':
@@ -295,4 +292,3 @@ if not bot_token:
     exit("Error: no token provided")
 
 bot.run(bot_token)
-

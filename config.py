@@ -1,6 +1,6 @@
 settings = {
     'id': 791105631385681960,
-    'prefix': '$',
+    'prefix': '!',
     'default_greet': 'Приветствую',
 }
 
