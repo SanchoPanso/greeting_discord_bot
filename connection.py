@@ -13,7 +13,7 @@ def is_connected(client: Client):
             return False
 
 
-async def connecting(client: Client, given_channel: VoiceChannel):
+async def connect(client: Client, given_channel: VoiceChannel):
     if is_connected(client):
         voice_client = client.voice_clients[0]
 
@@ -29,7 +29,7 @@ async def connecting(client: Client, given_channel: VoiceChannel):
     return voice_client
 
 
-async def disconnecting(client: Client):
+async def disconnect(client: Client):
     if is_connected(client):
         voice_client = client.voice_clients[0]
         while voice_client.is_playing():

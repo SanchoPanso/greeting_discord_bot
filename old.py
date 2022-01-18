@@ -5,9 +5,9 @@ import csv
 import os
 import pyttsx3
 from config import settings
-from connection_module import Greeting, ModeManager
-from connection_module import connecting, disconnecting, is_connected
-from connection_module import is_right_form_of_name_and_disc
+from connection import Greeting, ModeManager
+from connection import connect, disconnect, is_connected
+from connection import is_right_form_of_name_and_disc
 
 greet_path = 'greet.mp3'  # имя файла для записи голоса
 names_path = 'names.csv'

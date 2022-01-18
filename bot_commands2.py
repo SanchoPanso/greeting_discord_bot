@@ -6,7 +6,7 @@ from os import getenv
 from sys import exit
 
 from config import settings, paths
-from connection_module import connecting, disconnecting, is_connected
+from connection import connect, disconnect, is_connected
 
 
 @self.command()
@@ -39,7 +39,7 @@ async def connect(ctx, number):
 
     new_channel = ctx.guild.voice_channels[number - 1]
 
-    await connecting(self, new_channel)
+    await connect(self, new_channel)
 
 
 @self.command()
@@ -222,7 +222,7 @@ async def on_voice_state_update(member, before, after):
             # print(member)  # debug
             self.greeting.prepare_file_for_playing(after, member)
 
-            voice_client = await connecting(self, after.channel)
+            voice_client = await connect(self, after.channel)
 
             while voice_client.is_playing():
                 await asyncio.sleep(1)
@@ -240,7 +240,7 @@ async def on_voice_state_update(member, before, after):
                 await asyncio.sleep(1)
             # print('sleep_after_playing')  # debug
 
-            await disconnecting(self)
+            await disconnect(self)
 
     elif self.mode_manager.mode == 2:
         if self.mode_manager.voice_channel_for_mode_2 is not None and member.id != self.user.id:
@@ -250,7 +250,7 @@ async def on_voice_state_update(member, before, after):
 
                     self.greeting.prepare_file_for_playing(after, member)
 
-                    voice_client = await connecting(self, after.channel)
+                    voice_client = await connect(self, after.channel)
 
                     while voice_client.is_playing():
                         await asyncio.sleep(1)

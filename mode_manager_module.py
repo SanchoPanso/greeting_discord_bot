@@ -1,5 +1,5 @@
 import asyncio
-from connection_module import is_connected, connecting, disconnecting
+from connection import is_connected, connect, disconnect
 
 
 class ModeManager:
@@ -15,12 +15,12 @@ class ModeManager:
             voice_client = client.voice_clients[0]
             while voice_client.is_playing():
                 await asyncio.sleep(1)
-            await disconnecting(client)
+            await disconnect(client)
 
         if new_mode == 2:
             if self.voice_channel_for_mode_2 is not None:
                 if len(self.voice_channel_for_mode_2.members) > 0:
-                    await connecting(client, self.voice_channel_for_mode_2)
+                    await connect(client, self.voice_channel_for_mode_2)
 
         self.mode = new_mode
 
@@ -28,10 +28,10 @@ class ModeManager:
         if self.mode == 2:
             if self.voice_channel_for_mode_2 != new_channel:
                 if self.voice_channel_for_mode_2 is not None:
-                    await disconnecting(client)
+                    await disconnect(client)
 
                 if new_channel is not None:
                     if len(new_channel.members) > 0:
-                        await connecting(client, new_channel)
+                        await connect(client, new_channel)
 
         self.voice_channel_for_mode_2 = new_channel

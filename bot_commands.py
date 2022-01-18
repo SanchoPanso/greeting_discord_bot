@@ -1,6 +1,6 @@
 from bot import bot
-from connection_module import connecting, disconnecting, is_connected
-from connection_module import is_right_form_of_name_and_disc
+from connection import connect, disconnect, is_connected
+from connection import is_right_form_of_name_and_disc
 
 
 @bot.command()
@@ -34,7 +34,7 @@ async def connect(ctx, number):
 
     new_channel = ctx.guild.voice_channels[number - 1]
 
-    await connecting(bot, new_channel)
+    await connect(bot, new_channel)
 
 
 @bot.command()
