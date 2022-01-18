@@ -188,11 +188,11 @@ async def get_name(ctx, name_and_disc):
 @bot.command()
 async def extra_names(ctx, arg):
     if arg == '0':
-        greeting.extra_off()
+        greeting.extra_names_off()
         await ctx.channel.send('Дополнительные имена теперь не доступны')
 
     elif arg == '1':
-        greeting.extra_on()
+        greeting.extra_names_on()
         await ctx.channel.send('Дополнительные имена теперь доступны')
 
     else:

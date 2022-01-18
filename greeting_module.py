@@ -15,8 +15,7 @@ def is_right_form_of_name_and_disc(name_and_disc):
     return True
 
 
-class Greeting:
-
+class Greeter:
     def __init__(self):
         self.greet_path = paths['greet_path']
         self.names_path = paths['names_path']
@@ -35,13 +34,13 @@ class Greeting:
     def set_default_greet(self):
         self.greet = self.default_greet
 
-    def extra_on(self):
+    def extra_names_on(self):
         self.extra_names_are_available = True
 
-    def extra_off(self):
+    def extra_names_off(self):
         self.extra_names_are_available = False
 
-    def file_can_be_made(self, greet, name):
+    def create_greet_file(self, greet, name):
         try:
             mes = greet + ', ' + name
             print(mes)
@@ -92,21 +91,23 @@ class Greeting:
         else:
             name = member.name
         # пробуем новое приветствие и новое имя
-        if self.file_can_be_made(self.greet, name):
+        if self.create_greet_file(self.greet, name):
             return
         # пробуем новое притствие и обычное имя
-        elif self.file_can_be_made(self.greet, member.name):
+        elif self.create_greet_file(self.greet, member.name):
             return
         # пробуем новое приветствие и без имени
-        elif self.file_can_be_made(self.greet, ''):
+        elif self.create_greet_file(self.greet, ''):
             return
         # если ничего не подошло, выдаем дефолтное
-        elif self.file_can_be_made(self.default_greet, ''):
+        elif self.create_greet_file(self.default_greet, ''):
             return
         # если и это не подошло, выдаем англ вариант
-        self.file_can_be_made('Hi', '')
+        self.create_greet_file('Hi', '')
 
     def set_name(self, name_and_disc, extra_name, members):     # solve problem with checking and big size
+                                                                # change retval!
+                                                                # add db_worker
         if not is_right_form_of_name_and_disc(name_and_disc):
             return 'Неправильный формат имени пользователя'
 
