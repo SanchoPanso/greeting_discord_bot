@@ -9,7 +9,7 @@ from config import settings, paths
 from connection_module import connecting, disconnecting, is_connected
 from mode_manager_module import ModeManager
 from greeting_module import Greeter
-from cogs import BotCog
+import cogs
 
 # greeting = Greeting()
 # mode_manager = ModeManager()
@@ -26,8 +26,10 @@ class GreetingBot(commands.Bot):
         super().__init__(command_prefix=settings['prefix'], intents=intents)
         self.greeting = Greeter()
         self.mode_manager = ModeManager()
-        self.add_cog(BotCog(self))
-        # self.init_commands()
+
+        self.add_cog(cogs.Base(self))
+        self.add_cog(cogs.Mode(self, self.mode_manager))
+        self.add_cog(cogs.Greet(self, self.greeting))
 
     async def on_ready(self):
         print('Ready!')
