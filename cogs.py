@@ -7,7 +7,7 @@ from discord.ext import commands
 import connection
 from connection import connect, disconnect, is_connected
 from mode_manager_module import ModeManager
-from greeting_module import Greeter
+from greeting import Greeter
 from config import settings, paths
 
 
@@ -43,7 +43,7 @@ class Base(commands.Cog):
             return
 
         new_channel = ctx.guild.voice_channels[number - 1]
-        await connection_module.connect(self.bot, new_channel)
+        await connection.connect(self.bot, new_channel)
 
     @commands.command()
     async def disconnect(self, ctx: commands.Context):
@@ -151,7 +151,7 @@ class Greet(commands.Cog):
         :return:
         """
         executable_path = paths['executable_path']
-        if connection_module.is_connected(self.bot):
+        if connection.is_connected(self.bot):
             voice_client = self.bot.voice_clients[0]
             if os.name == 'nt':
                 voice_client.play(discord.FFmpegPCMAudio(executable=executable_path,

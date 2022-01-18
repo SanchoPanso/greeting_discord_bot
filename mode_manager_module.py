@@ -1,5 +1,6 @@
 import asyncio
 from connection import is_connected, connect, disconnect
+from discord import VoiceClient, Client, VoiceChannel, VoiceState, Member, ClientUser
 
 
 class ModeManager:
@@ -35,3 +36,40 @@ class ModeManager:
                         await connect(client, new_channel)
 
         self.voice_channel_for_mode_2 = new_channel
+
+    def bot_must_connect_and_play(self,
+                                  client: Client,
+                                  member: Member,
+                                  before: VoiceState,
+                                  after: VoiceState):
+
+        if self.mode == 1:
+            cond1 = before.channel is not after.channel
+            cond2 = after.channel is not None
+            cond3 = member.id != client.user.id
+            cond4 = after.channel.guild.me.permissions_in(after.channel).connect if cond2 else False
+
+            all_conditions_are_true = cond1 and cond2 and cond3 and cond4
+            return all_conditions_are_true
+
+        if self.mode == 2:
+            if self.voice_channel_for_mode_2 is not None and member.id != client.user.id:
+                if before.channel != self.voice_channel_for_mode_2:
+                    if after.channel == self.voice_channel_for_mode_2:
+                        return True
+
+            return False
+
+    def bot_must_disconnect(self,
+                            before: VoiceState,
+                            after: VoiceState):
+        if self.mode == 1:
+            return True
+
+        elif self.mode == 2:
+            if before.channel == self.voice_channel_for_mode_2:
+                if after.channel != self.voice_channel_for_mode_2:
+                    return True
+            return False
+
+
