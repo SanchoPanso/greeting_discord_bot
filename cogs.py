@@ -5,7 +5,7 @@ import os
 
 from discord.ext import commands
 import connection
-from mode_manager_module import ModeManager
+from mode_manager import ModeManager
 from greeting import Greeter
 import config as cfg
 

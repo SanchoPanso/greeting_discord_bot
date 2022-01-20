@@ -8,7 +8,7 @@ from sys import exit
 
 import config as cfg
 from connection import connect, disconnect, is_connected
-from mode_manager_module import ModeManager
+from mode_manager import ModeManager
 from greeting import Greeter
 import cogs
 
