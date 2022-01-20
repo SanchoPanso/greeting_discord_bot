@@ -5,10 +5,9 @@ import os
 
 from discord.ext import commands
 import connection
-from connection import connect, disconnect, is_connected
 from mode_manager_module import ModeManager
 from greeting import Greeter
-from config import settings, paths
+import config as cfg
 
 
 class Base(commands.Cog):
@@ -95,7 +94,7 @@ class Mode(commands.Cog):
             await ctx.channel.send('Неправильный аргумент')  # 2
             return
         new_mode = int(new_mode)
-        await self.mm.set_mode(self, new_mode)
+        await self.mm.set_mode(self.bot, new_mode)
         await ctx.channel.send('mode = {0}'.format(self.mm.get_mode()))  # 3
 
     @commands.command()
@@ -127,7 +126,7 @@ class Mode(commands.Cog):
             await ctx.channel.send('Неправильный аргумент')  # 2
             return
 
-        await self.mm.set_voice_channel(self, new_channel)
+        await self.mm.set_voice_channel(self.bot, new_channel)
 
         if self.mm.voice_channel_for_mode_2 is None:
             await ctx.channel.send('Номер голосового чата сброшен')
@@ -150,7 +149,7 @@ class Greet(commands.Cog):
         :param ctx:
         :return:
         """
-        executable_path = paths['executable_path']
+        executable_path = cfg.executable_path
         if connection.is_connected(self.bot):
             voice_client = self.bot.voice_clients[0]
             if os.name == 'nt':

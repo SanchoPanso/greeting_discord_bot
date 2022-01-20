@@ -1,6 +1,6 @@
 import os
 import csv
-from config import settings, paths
+import config as cfg
 import pyttsx3
 
 
@@ -17,11 +17,11 @@ def is_right_form_of_name_and_disc(name_and_disc):
 
 class Greeter:
     def __init__(self):
-        self.greet_path = paths['greet_path']
-        self.names_path = paths['names_path']
-        self.names_buffer_path = paths['names_buffer_path']
+        self.greet_path = cfg.greet_path
+        self.names_path = cfg.names_path
+        self.names_buffer_path = cfg.names_buffer_path
 
-        self.default_greet = settings['default_greet']
+        self.default_greet = cfg.default_greet
         self.greet = self.default_greet
         self.extra_names_are_available = False
 

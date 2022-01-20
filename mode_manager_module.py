@@ -69,7 +69,9 @@ class ModeManager:
         elif self.mode == 2:
             if before.channel == self.voice_channel_for_mode_2:
                 if after.channel != self.voice_channel_for_mode_2:
-                    return True
+                    if self.voice_channel_for_mode_2 is not None:
+                        if len(self.voice_channel_for_mode_2.members) == 1:
+                            return True
             return False
 
 
