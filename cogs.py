@@ -3,7 +3,6 @@ from discord.ext import commands
 import asyncio
 import os
 
-from discord.ext import commands
 import connection
 from mode_manager import ModeManager
 from greeting import Greeter
@@ -26,9 +25,6 @@ class Base(commands.Cog):
         """
         Connect to the voice channel, which is placed in the guild where this command is recalled
         and which has required number
-        :param ctx: context
-        :param number: the number of the voice channel to which you want to connect (numbering begins with one(!?))
-        :return: nothing
         """
 
         if not number.isdigit():
@@ -48,8 +44,6 @@ class Base(commands.Cog):
     async def disconnect(self, ctx: commands.Context):
         """
         disconnect from any voice channel
-        :param ctx:
-        :return:
         """
         await ctx.guild.change_voice_state(channel=None,
                                            self_mute=False,
@@ -57,6 +51,9 @@ class Base(commands.Cog):
 
     @commands.command()
     async def voice_members_info(self, ctx: commands.Context):
+        """
+        Send info about members in all voice channels
+        """
         for channel in ctx.guild.voice_channels:
             await ctx.channel.send(channel)
             for member in channel.members:
@@ -64,11 +61,17 @@ class Base(commands.Cog):
 
     @commands.command()
     async def members_info(self, ctx: commands.Context):
+        """
+        Send info about members
+        """
         members = ctx.guild.members
         await ctx.channel.send(members)
 
     @commands.command()
     async def members_brief_info(self, ctx: commands.Context):
+        """
+        Send brief info about members
+        """
         members = ctx.guild.members
         result = ''
         for i in range(len(members)):
@@ -86,10 +89,14 @@ class Mode(commands.Cog):
 
     @commands.command()
     async def get_mode(self, ctx):
+        """Get current mode"""
         await ctx.channel.send('mode = {0}'.format(self.mm.get_mode()))
 
     @commands.command()
     async def set_mode(self, ctx, new_mode):
+        """
+        Set mode (0 - off; 1 - mode 1; 2 - mode 2)
+        """
         if new_mode not in ['0', '1', '2']:
             await ctx.channel.send('Неправильный аргумент')  # 2
             return
@@ -100,11 +107,13 @@ class Mode(commands.Cog):
     @commands.command()
     async def set_voice_channel(self, ctx, number):
         """
-
-        :param ctx:
-        :param number:
-        :return:
+        Set voice channel for mode 2
         """
+
+        if not number.isdigit():
+            await ctx.channel.send('Неправильный аргумент')
+            return
+
         new_channel = self.mm.voice_channel_for_mode_2
 
         if number.isdigit():
@@ -116,25 +125,24 @@ class Mode(commands.Cog):
                 if not new_guild.me.permissions_in(new_channel).connect:
                     await ctx.channel.send('Нет доступа к этому каналу')
                     return
-            else:
-                await ctx.channel.send('Неправильное число')  # 1
-                return
 
-        elif number.lower() == 'none':
-            new_channel = None
-        else:
-            await ctx.channel.send('Неправильный аргумент')  # 2
-            return
+            elif number == 0:
+                new_channel = None
+
+            else:
+                await ctx.channel.send('Неправильное число')
+                return
 
         await self.mm.set_voice_channel(self.bot, new_channel)
 
+        # send response
         if self.mm.voice_channel_for_mode_2 is None:
             await ctx.channel.send('Номер голосового чата сброшен')
         else:
             addition = 'Название: ' + self.mm.voice_channel_for_mode_2.name
             await ctx.channel.send('Номер голосового чата: ' +
                                    str(number) +
-                                   '\n' + addition)  # 4
+                                   '\n' + addition)
 
 
 class Greet(commands.Cog):
@@ -146,8 +154,6 @@ class Greet(commands.Cog):
     async def play_greet(self, ctx: commands.Context):
         """
         if bot is connected play greeting message
-        :param ctx:
-        :return:
         """
         executable_path = cfg.executable_path
         if connection.is_connected(self.bot):
@@ -163,31 +169,51 @@ class Greet(commands.Cog):
 
     @commands.command()
     async def get_greet(self, ctx: commands.Context):
+        """
+        Get current greeting message
+        """
         await ctx.channel.send('greet = {0}'.format(self.gr.get_greet()))
 
     @commands.command()
     async def set_greet(self, ctx: commands.Context, new_greet: str):
+        """
+        Set greeting message
+        """
         new_greet = ' '.join(new_greet.split('_'))
         self.gr.set_greet(new_greet)
         await ctx.channel.send('greet = {0}'.format(self.gr.get_greet()))
 
     @commands.command()
     async def set_default_greet(self, ctx: commands.Context):
+        """
+        Set default greeting message
+        """
         self.gr.set_default_greet()
         await ctx.channel.send('greet = {0}'.format(self.gr.get_greet()))
 
     @commands.command()
-    async def set_name(self, ctx, name_and_disc, extra_name):
+    async def set_name(self, ctx: commands.Context,
+                       name_and_disc: str,
+                       extra_name: str):
+        """
+        Set special name (extra_name) for some user (name_and_disc)
+        """
         extra_name = ' '.join(extra_name.split('_'))
         mes = self.gr.set_name(name_and_disc, extra_name, ctx.guild.members)
         await ctx.channel.send(mes)
 
     @commands.command()
     async def get_name(self, ctx, name_and_disc):
+        """
+        Get name (rewrite)
+        """
         await ctx.channel.send(self.gr.get_name(name_and_disc, ctx.guild.members))
 
     @commands.command()
     async def extra_names(self, ctx, arg):
+        """
+        Include or exclude extra names (0 - off, 1 - on)
+        """
         if arg == '0':
             self.gr.extra_names_off()
             await ctx.channel.send('Дополнительные имена теперь не доступны')

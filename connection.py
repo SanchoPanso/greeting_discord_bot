@@ -32,8 +32,10 @@ async def connect(client: Client, given_channel: VoiceChannel):
 async def disconnect(client: Client):
     if is_connected(client):
         voice_client = client.voice_clients[0]
+
         while voice_client.is_playing():
             await asyncio.sleep(1)
+
         await voice_client.disconnect()
 
 

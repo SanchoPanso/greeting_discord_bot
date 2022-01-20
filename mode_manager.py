@@ -1,6 +1,6 @@
 import asyncio
 from connection import is_connected, connect, disconnect
-from discord import VoiceClient, Client, VoiceChannel, VoiceState, Member, ClientUser
+from discord import Client, VoiceChannel, VoiceState, Member
 
 
 class ModeManager:
@@ -25,7 +25,7 @@ class ModeManager:
 
         self.mode = new_mode
 
-    async def set_voice_channel(self, client, new_channel):
+    async def set_voice_channel(self, client: Client, new_channel: VoiceChannel):
         if self.mode == 2:
             if self.voice_channel_for_mode_2 != new_channel:
                 if self.voice_channel_for_mode_2 is not None:
