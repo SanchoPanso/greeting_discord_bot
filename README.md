@@ -14,6 +14,8 @@ pip install -r requirements.txt
 https://discordapp.com/oauth2/authorize?&client_id=CLID&scope=bot&permissions=8
 (где CLID заменяется на client id).
 # Начало работы
+Программа запускается из файла `main.py`. Для работы необходимо определить переменную среды `BOT_TOKEN`.
+
 Для проверки работоспособности можно воспользоваться командой `!hello`, которая выводит текстовое сообщение "**Hello world!**" в чат,
 из которого данная команда была вызвана.
 
