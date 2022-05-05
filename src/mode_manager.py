@@ -1,5 +1,5 @@
 import asyncio
-from connection import is_connected, connect, disconnect
+from src.connection import is_connected, connect, disconnect
 from discord import Client, VoiceChannel, VoiceState, Member
 
 

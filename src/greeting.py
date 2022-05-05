@@ -1,6 +1,6 @@
 import os
 import csv
-import config as cfg
+import src.config as cfg
 import pyttsx3
 
 

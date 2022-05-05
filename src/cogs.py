@@ -3,10 +3,10 @@ from discord.ext import commands
 import asyncio
 import os
 
-import connection
-from mode_manager import ModeManager
-from greeting import Greeter
-import config as cfg
+import src.connection as connection
+from src.mode_manager import ModeManager
+from src.greeting import Greeter
+import src.config as cfg
 
 
 class Base(commands.Cog):

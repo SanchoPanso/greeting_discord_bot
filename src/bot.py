@@ -3,14 +3,12 @@ from discord.ext import commands
 from discord import VoiceClient
 import asyncio
 import os
-from os import getenv
-from sys import exit
 
-import config as cfg
-from connection import connect, disconnect, is_connected
-from mode_manager import ModeManager
-from greeting import Greeter
-import cogs
+import src.config as cfg
+from src.connection import connect, disconnect
+from src.mode_manager import ModeManager
+from src.greeting import Greeter
+import src.cogs as cogs
 
 
 class GreetingBot(commands.Bot):

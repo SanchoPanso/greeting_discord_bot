@@ -1,4 +1,4 @@
-from bot import GreetingBot
+from src.bot import GreetingBot
 from os import getenv
 from sys import exit
 
